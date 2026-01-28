@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Plus Auto Care Center - Billing System</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1>Fix Plus Auto Care Center - Billing System</h1>
+            <button id="openFolder" class="folder-btn">Open Bills Folder</button>
+        </header>
+
+        <div class="form-container">
+            <form id="billingForm">
+                <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="billNumber">Bill Number:</label>
+                            <input type="text" id="billNumber" name="billNumber" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="billDate">Date:</label>
+                            <input type="date" id="billDate" name="billDate" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label for="customerName">Customer Name:</label>
+                            <input type="text" id="customerName" name="customerName" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerPhone">Cell/Tele No:</label>
+                            <input type="tel" id="customerPhone" name="customerPhone" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vehicleMake">Vehicle Make:</label>
+                            <input type="text" id="vehicleMake" name="vehicleMake" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="vehicleNumber">Vehicle No:</label>
+                            <input type="text" id="vehicleNumber" name="vehicleNumber" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="items-section">
+                    <h3>Items/Services</h3>
+                    <table id="itemsTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">No.</th>
+                                <th>Particulars</th>
+                                <th style="width: 100px;">Qty</th>
+                                <th style="width: 150px;">Amount</th>
+                                <th style="width: 80px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsBody">
+                            <tr class="item-row">
+                                <td class="item-number">1</td>
+                                <td><input type="text" class="item-particulars" placeholder="Item/Service description" required></td>
+                                <td><input type="number" class="item-qty" value="1" min="1" required></td>
+                                <td><input type="number" class="item-amount" placeholder="0.00" step="0.01" min="0" required></td>
+                                <td><button type="button" class="remove-btn" onclick="removeItem(this)">Remove</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <button type="button" id="addItem" class="add-btn">+ Add Item</button>
+                </div>
+
+                <div class="totals-section">
+                    <div class="total-row">
+                        <label>Basic Amount:</label>
+                        <input type="text" id="basicAmount" readonly>
+                    </div>
+                    <div class="total-row">
+                        <label>SGST 9%:</label>
+                        <input type="text" id="sgst" readonly>
+                    </div>
+                    <div class="total-row">
+                        <label>CGST 9%:</label>
+                        <input type="text" id="cgst" readonly>
+                    </div>
+                    <div class="total-row grand-total">
+                        <label>Total:</label>
+                        <input type="text" id="grandTotal" readonly>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-group full-width">
+                        <label for="amountInWords">Amount in Words:</label>
+                        <input type="text" id="amountInWords" readonly>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button type="submit" class="generate-btn">Generate PDF</button>
+                    <button type="button" id="clearForm" class="clear-btn">Clear Form</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
