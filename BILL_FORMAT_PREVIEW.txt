@@ -1,0 +1,170 @@
+================================================================================
+              HOW YOUR BILL WILL LOOK (PDF Preview)
+================================================================================
+
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                                                          │
+│  GSTIN: 29CGBPM0738G1ZF    CASH BILL      Mob: 94488 07237             │
+│                                                 77957 40356             │
+│                                                                          │
+│                  FIX PLUS AUTO CARE CENTER                              │
+│                                                                          │
+│            All New Generation Car Spare Parts Available                 │
+│        C-8, SRI MAHADESHWARA COLLEGE ROAD,KOLLEGALA-571440             │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  No. 186                                         Date: 28/01/2026       │
+│                                                                          │
+│  Customer Name: Rajesh Kumar                                            │
+│  Cell/Tele No: 9876543210                                              │
+│                                                                          │
+│  Vehicle Make: Maruti Suzuki Swift                                      │
+│  Vehicle No: KA-09-MN-1234                                              │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  No. | Particulars              | Qty |        Amount                   │
+│──────|──────────────────────────|─────|─────────────────                │
+│  1   | Engine Oil Change        |  1  |        500.00                   │
+│  2   | Air Filter Replacement   |  1  |        350.00                   │
+│  3   | General Service          |  1  |       1500.00                   │
+│                                                                          │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│                              Basic:           2350.00                    │
+│                              SGST 9%:          211.50                    │
+│                              CGST 9%:          211.50                    │
+│                              ─────────────────────────                   │
+│                              Total:           2773.00                    │
+│                                                                          │
+│  Received Rupees: Two Thousand Seven Hundred Seventy Three Rupees Only  │
+│                                                                          │
+│                                                                          │
+│                                              Signature                   │
+│                                              ──────────                  │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+
+
+================================================================================
+KEY FEATURES OF YOUR BILL:
+================================================================================
+
+✓ Professional header with company name and details
+✓ GSTIN number displayed prominently
+✓ Bill number (auto-increments: 186, 187, 188...)
+✓ Date (auto-fills with today's date)
+✓ Customer information section
+✓ Vehicle details section
+✓ Itemized list of services/parts with quantities and amounts
+✓ Automatic calculation of:
+  • Basic Amount (sum of all items)
+  • SGST 9% (State GST)
+  • CGST 9% (Central GST)
+  • Total (Basic + 18% GST)
+✓ Amount in words (in English)
+✓ Signature line for authorization
+
+
+================================================================================
+HOW CALCULATIONS WORK:
+================================================================================
+
+Example:
+--------
+Item 1: Engine Oil          = ₹500
+Item 2: Air Filter          = ₹350
+Item 3: General Service     = ₹1500
+                              ─────
+Basic Amount                = ₹2350
+
+SGST (9% of 2350)          = ₹211.50
+CGST (9% of 2350)          = ₹211.50
+                              ─────
+Total Amount               = ₹2773.00
+
+✓ All calculations are AUTOMATIC!
+✓ You just enter items and amounts
+✓ Software calculates GST and Total
+
+
+================================================================================
+WHAT CUSTOMER SEES:
+================================================================================
+
+Your customer will receive a professional PDF bill that:
+
+✓ Looks exactly like the format shown above
+✓ Is ready to print (A4 size)
+✓ Has all legal tax information (GSTIN, GST breakdown)
+✓ Shows itemized services clearly
+✓ Has your company branding
+✓ Can be saved or emailed
+✓ Looks professional and trustworthy
+
+
+================================================================================
+BILL FILE NAME FORMAT:
+================================================================================
+
+Your bills are saved as:
+
+Bill_186_Rajesh_Kumar_1738091234567.pdf
+
+Format:
+Bill_[Number]_[Customer_Name]_[Timestamp].pdf
+
+This makes it easy to:
+✓ Find bills by number
+✓ Find bills by customer name
+✓ Keep bills organized
+✓ Never overwrite old bills
+
+
+================================================================================
+WHERE BILLS ARE SAVED:
+================================================================================
+
+All your PDF bills are saved in:
+
+📁 project bill
+   └── 📁 generated_bills
+        ├── Bill_186_Rajesh_Kumar_1738091234567.pdf
+        ├── Bill_187_Suresh_Reddy_1738091456789.pdf
+        ├── Bill_188_Priya_Sharma_1738091678901.pdf
+        └── ... (all your bills)
+
+
+================================================================================
+PRINTING YOUR BILLS:
+================================================================================
+
+Method 1 (From Software):
+1. Click "Open Bills Folder" button in the software
+2. Double-click any PDF file
+3. Press Ctrl+P to print
+4. Select printer and click Print
+
+Method 2 (From Folder):
+1. Go to "generated_bills" folder
+2. Right-click on the PDF file
+3. Click "Print"
+
+
+================================================================================
+THIS IS EXACTLY WHAT YOU ASKED FOR! ✓
+================================================================================
+
+✓ Digital version of your manual bill
+✓ Same format as your paper bills
+✓ Auto-calculates GST (9% + 9% = 18%)
+✓ Saves PDF to local folder
+✓ Works offline (no internet needed)
+✓ Easy to print
+✓ Professional appearance
+✓ Company details: FIX PLUS AUTO CARE CENTER
+✓ Address: C-8, SRI MAHADESHWARA COLLEGE ROAD,KOLLEGALA-571440
+
+
+================================================================================

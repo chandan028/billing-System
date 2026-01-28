@@ -1,0 +1,74 @@
+========================================
+FIX PLUS AUTO CARE CENTER - BILLING SYSTEM
+QUICK START GUIDE
+========================================
+
+FIRST TIME SETUP:
+-----------------
+
+1. Install Node.js:
+   - Go to: https://nodejs.org/
+   - Download and install LTS version
+   - Restart your computer after installation
+
+2. Install Application:
+   - Open Command Prompt (cmd)
+   - Navigate to this folder:
+     cd "path\to\project bill"
+   - Run: npm install
+   - Wait for installation to complete
+
+3. Start Application:
+   - Double-click "START_APP.bat" file
+   OR
+   - Open Command Prompt in this folder
+   - Run: npm start
+
+========================================
+
+DAILY USE:
+----------
+
+Simply double-click "START_APP.bat" to start the application!
+
+========================================
+
+FEATURES:
+---------
+
+✓ Auto bill numbering
+✓ Automatic GST calculation (9% SGST + 9% CGST)
+✓ Amount to words conversion
+✓ PDF generation
+✓ Works offline
+✓ Professional bill format
+
+========================================
+
+WHERE ARE MY BILLS?
+-------------------
+
+All generated PDFs are saved in:
+"project bill/generated_bills/"
+
+Click "Open Bills Folder" button in the app to view them.
+
+========================================
+
+NEED HELP?
+----------
+
+Read the complete README.md file for:
+- Detailed instructions
+- Troubleshooting tips
+- Customization options
+
+========================================
+
+Contact:
+Fix Plus Auto Care Center
+C-8, SRI MAHADESHWARA COLLEGE ROAD
+KOLLEGALA-571440
+Mob: 94488 07237, 77957 40356
+
+========================================
