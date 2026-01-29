@@ -1,0 +1,47 @@
+================================================================================
+              HOW TO ADD YOUR LOGO TO BILLS
+================================================================================
+
+To show your logo as a watermark on all bills, follow these steps:
+
+STEP 1: Save your logo file
+---------------------------
+1. Save your logo image as: logo.png
+2. The logo should be:
+   - PNG format (recommended)
+   - Square shape works best (same width and height)
+   - Minimum size: 500 x 500 pixels
+   - Maximum size: 1000 x 1000 pixels
+
+STEP 2: Place the logo file
+---------------------------
+1. Copy your logo.png file
+2. Paste it in this folder: "project bill"
+   (Same folder where START_APP.bat is located)
+
+STEP 3: Restart the application
+-------------------------------
+1. Close the billing software (if open)
+2. Double-click START_APP.bat to restart
+3. Your logo will now appear as a watermark!
+
+================================================================================
+WHERE TO FIND YOUR LOGO
+================================================================================
+
+Your logo should be saved at:
+"project bill/logo.png"
+
+The file MUST be named exactly: logo.png (lowercase)
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+If logo doesn't appear:
+1. Make sure file is named exactly "logo.png" (not "Logo.png" or "logo.PNG")
+2. Make sure file is in the correct folder
+3. Restart the application completely
+4. Check that the image opens properly in an image viewer
+
+================================================================================
