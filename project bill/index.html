@@ -18,6 +18,14 @@
                 <div class="form-section">
                     <div class="form-row">
                         <div class="form-group">
+                            <label for="billType">Bill Type:</label>
+                            <select id="billType" name="billType">
+                                <option value="CASH BILL" selected>Cash Bill</option>
+                                <option value="QUOTATION">Quotation</option>
+                                <option value="CREDIT BILL">Credit Bill</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="billNumber">Bill Number:</label>
                             <input type="text" id="billNumber" name="billNumber" required>
                         </div>
@@ -36,8 +44,8 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="customerPhone">Cell/Tele No:</label>
-                            <input type="tel" id="customerPhone" name="customerPhone" required>
+                            <label for="customerPhone">Cell/Tele No (10 digits):</label>
+                            <input type="tel" id="customerPhone" name="customerPhone" pattern="[0-9]{10}" maxlength="10" placeholder="Enter 10 digit number" required>
                         </div>
                     </div>
 
@@ -79,21 +87,24 @@
                 </div>
 
                 <div class="totals-section">
-                    <div class="total-row">
-                        <label>Basic Amount:</label>
-                        <input type="text" id="basicAmount" readonly>
-                    </div>
-                    <div class="total-row">
-                        <label>SGST 9%:</label>
-                        <input type="text" id="sgst" readonly>
-                    </div>
-                    <div class="total-row">
-                        <label>CGST 9%:</label>
-                        <input type="text" id="cgst" readonly>
-                    </div>
                     <div class="total-row grand-total">
-                        <label>Total:</label>
+                        <label>Total (Incl. GST):</label>
                         <input type="text" id="grandTotal" readonly>
+                    </div>
+                    <div class="gst-breakdown">
+                        <p class="breakdown-title">GST Breakdown (18%):</p>
+                        <div class="total-row">
+                            <label>Basic Amount:</label>
+                            <input type="text" id="basicAmount" readonly>
+                        </div>
+                        <div class="total-row">
+                            <label>SGST 9%:</label>
+                            <input type="text" id="sgst" readonly>
+                        </div>
+                        <div class="total-row">
+                            <label>CGST 9%:</label>
+                            <input type="text" id="cgst" readonly>
+                        </div>
                     </div>
                 </div>
 

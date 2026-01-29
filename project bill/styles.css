@@ -219,9 +219,9 @@ body {
 }
 
 .grand-total {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 2px solid #2ecc71;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #2ecc71;
 }
 
 .grand-total label {
@@ -233,6 +233,47 @@ body {
     font-size: 18px;
     color: #2ecc71;
     border-color: #2ecc71;
+}
+
+.gst-breakdown {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px dashed #2ecc71;
+}
+
+.breakdown-title {
+    font-weight: 600;
+    color: #27ae60;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.gst-breakdown .total-row {
+    margin-bottom: 8px;
+}
+
+.gst-breakdown .total-row label {
+    font-size: 13px;
+    color: #7f8c8d;
+}
+
+.gst-breakdown .total-row input {
+    width: 150px;
+    font-size: 13px;
+    padding: 6px;
+}
+
+#billType {
+    background: #2ecc71;
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#billType option {
+    background: white;
+    color: #2c3e50;
 }
 
 .button-group {

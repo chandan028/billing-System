@@ -7,7 +7,11 @@
     "start": "electron .",
     "build": "electron-builder"
   },
-  "keywords": ["billing", "automobile", "invoice"],
+  "keywords": [
+    "billing",
+    "automobile",
+    "invoice"
+  ],
   "author": "Fix Plus Auto Care Center",
   "license": "ISC",
   "devDependencies": {
