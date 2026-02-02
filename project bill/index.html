@@ -27,25 +27,29 @@
                         </div>
                         <div class="form-group">
                             <label for="billNumber">Bill Number:</label>
-                            <input type="text" id="billNumber" name="billNumber" required>
+                            <input type="text" id="billNumber" name="billNumber" readonly class="readonly-field">
                         </div>
                         <div class="form-group">
                             <label for="billDate">Date:</label>
-                            <input type="date" id="billDate" name="billDate" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group full-width">
-                            <label for="customerName">Customer Name:</label>
-                            <input type="text" id="customerName" name="customerName" required>
+                            <input type="date" id="billDate" name="billDate" readonly class="readonly-field">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="customerPhone">Cell/Tele No (10 digits):</label>
+                            <label for="customerName">Customer Name:</label>
+                            <input type="text" id="customerName" name="customerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="customerPhone">Phone (10 digits):</label>
                             <input type="tel" id="customerPhone" name="customerPhone" pattern="[0-9]{10}" maxlength="10" placeholder="Enter 10 digit number" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="customerGstin">Customer GSTIN (Optional):</label>
+                            <input type="text" id="customerGstin" name="customerGstin" placeholder="Enter GSTIN if available" maxlength="15">
                         </div>
                     </div>
 
@@ -116,10 +120,23 @@
                 </div>
 
                 <div class="button-group">
-                    <button type="submit" class="generate-btn">Generate PDF</button>
+                    <button type="submit" class="generate-btn">Generate PDF & Print</button>
+                    <button type="button" id="sendWhatsApp" class="whatsapp-btn" disabled>Send on WhatsApp</button>
                     <button type="button" id="clearForm" class="clear-btn">Clear Form</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- WhatsApp Success Modal -->
+    <div id="whatsappModal" class="modal">
+        <div class="modal-content">
+            <h3>Send Bill on WhatsApp</h3>
+            <p id="whatsappModalText"></p>
+            <div class="modal-buttons">
+                <button id="confirmWhatsApp" class="whatsapp-btn">Open WhatsApp</button>
+                <button id="cancelWhatsApp" class="clear-btn">Cancel</button>
+            </div>
         </div>
     </div>
 

@@ -127,3 +127,14 @@ ipcMain.handle('open-bills-folder', async () => {
     return { success: false, error: error.message };
   }
 });
+
+// Open specific PDF file
+ipcMain.handle('open-pdf-file', async (event, filePath) => {
+  try {
+    await shell.openPath(filePath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error opening PDF:', error);
+    return { success: false, error: error.message };
+  }
+});

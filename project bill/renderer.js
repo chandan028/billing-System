@@ -1,9 +1,12 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
 // Logo base64 (will be loaded from file)
 let logoBase64 = null;
+
+// Store last generated bill data for WhatsApp sharing
+let lastBillData = null;
 
 // Initialize bill number on load
 window.addEventListener('DOMContentLoaded', async () => {
@@ -57,6 +60,25 @@ function setupEventListeners() {
     document.getElementById('customerPhone').addEventListener('input', function(e) {
         this.value = this.value.replace(/[^0-9]/g, '').substring(0, 10);
     });
+
+    // GSTIN validation - uppercase and limit
+    document.getElementById('customerGstin').addEventListener('input', function(e) {
+        this.value = this.value.toUpperCase().substring(0, 15);
+    });
+
+    // WhatsApp button
+    document.getElementById('sendWhatsApp').addEventListener('click', showWhatsAppModal);
+
+    // WhatsApp modal buttons
+    document.getElementById('confirmWhatsApp').addEventListener('click', sendWhatsApp);
+    document.getElementById('cancelWhatsApp').addEventListener('click', hideWhatsAppModal);
+
+    // Close modal on outside click
+    document.getElementById('whatsappModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideWhatsAppModal();
+        }
+    });
 }
 
 function addItem() {
@@ -103,16 +125,21 @@ function calculateTotals() {
     rows.forEach(row => {
         const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
         const amount = parseFloat(row.querySelector('.item-amount').value) || 0;
-        grandTotal += qty * amount;
+        // Calculate line total with precision
+        const lineTotal = Math.round(qty * amount * 100) / 100;
+        grandTotal += lineTotal;
     });
 
+    // Round grand total to 2 decimal places
+    grandTotal = Math.round(grandTotal * 100) / 100;
+
     // Reverse calculate: Total includes 18% GST
-    // Basic = Total / 1.18
-    // SGST = Basic * 0.09
-    // CGST = Basic * 0.09
-    const basicAmount = grandTotal / 1.18;
-    const sgst = basicAmount * 0.09;
-    const cgst = basicAmount * 0.09;
+    // Formula: Total = Basic + (Basic * 0.18)
+    // Therefore: Basic = Total / 1.18
+    // Using precise calculation
+    const basicAmount = Math.round((grandTotal / 1.18) * 100) / 100;
+    const sgst = Math.round((basicAmount * 0.09) * 100) / 100;
+    const cgst = Math.round((basicAmount * 0.09) * 100) / 100;
 
     document.getElementById('grandTotal').value = grandTotal.toFixed(2);
     document.getElementById('basicAmount').value = basicAmount.toFixed(2);
@@ -130,7 +157,7 @@ function numberToWords(num) {
 
     if (num === 0) return 'Zero Rupees Only';
 
-    num = Math.floor(num);
+    num = Math.floor(Math.abs(num));
 
     const crore = Math.floor(num / 10000000);
     num %= 10000000;
@@ -189,6 +216,304 @@ function numberToWordsHelper(num) {
     return '';
 }
 
+// Constants for pagination
+const ITEMS_PER_PAGE_FIRST = 20;  // Items on first page (with header)
+const ITEMS_PER_PAGE_CONTINUATION = 25;  // Items on continuation pages (more space without header)
+
+// Function to generate all pages for one copy (Customer or Merchant)
+function generateBillCopy(doc, formData, items, copyType, isFirstCopy) {
+    const totalItems = items.length;
+
+    // Calculate how many pages needed for this copy
+    let remainingItems = totalItems;
+    let pageCount = 0;
+
+    if (remainingItems <= ITEMS_PER_PAGE_FIRST) {
+        pageCount = 1;
+    } else {
+        remainingItems -= ITEMS_PER_PAGE_FIRST;
+        pageCount = 1 + Math.ceil(remainingItems / ITEMS_PER_PAGE_CONTINUATION);
+    }
+
+    let itemIndex = 0;
+
+    for (let pageNum = 0; pageNum < pageCount; pageNum++) {
+        // Add new page (except for very first page of document)
+        if (pageNum > 0 || !isFirstCopy) {
+            doc.addPage();
+        }
+
+        const isFirstPage = (pageNum === 0);
+        const isLastPage = (pageNum === pageCount - 1);
+
+        // Determine items for this page
+        const itemsPerThisPage = isFirstPage ? ITEMS_PER_PAGE_FIRST : ITEMS_PER_PAGE_CONTINUATION;
+        const pageItems = items.slice(itemIndex, itemIndex + itemsPerThisPage);
+        itemIndex += pageItems.length;
+
+        // Generate the page
+        generateSinglePage(doc, formData, pageItems, copyType, isFirstPage, isLastPage, pageNum + 1, pageCount);
+    }
+}
+
+// Function to generate a single page of the bill
+function generateSinglePage(doc, formData, items, copyType, isFirstPage, isLastPage, currentPage, totalPages) {
+    const green = [46, 204, 113];
+    const darkGreen = [39, 174, 96];
+    const lightGrey = [245, 245, 245];
+    const grey = [200, 200, 200];
+
+    // Add watermark logo if available
+    if (logoBase64) {
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({ opacity: 0.08 }));
+        doc.addImage(logoBase64, 'PNG', 50, 100, 110, 110);
+        doc.restoreGraphicsState();
+    }
+
+    let itemTableStartY;
+
+    if (isFirstPage) {
+        // Full Header - Company Info (only on first page)
+        doc.setFillColor(...green);
+        doc.rect(10, 10, 190, 48, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text('GSTIN: 29CGBPM0738G1ZF', 15, 17);
+
+        // Bill Type (dynamic)
+        doc.setFontSize(11);
+        doc.setFont(undefined, 'bold');
+        doc.text(formData.billType, 105, 17, { align: 'center' });
+
+        // Copy Type Label (Customer Copy / Merchant Copy)
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'italic');
+        doc.text(`[ ${copyType} ]`, 105, 23, { align: 'center' });
+
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text('Mob: 94488 07237, 77957 40356', 175, 17, { align: 'right' });
+
+        doc.setFontSize(18);
+        doc.setFont(undefined, 'bold');
+        doc.text('FIX PLUS AUTO CARE CENTER', 105, 33, { align: 'center' });
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.text('Experts in Mahindra, Maruti, Tata & New-Gen Cars | Genuine Spare Parts | Trusted Quality Service', 105, 40, { align: 'center' });
+        doc.text('C-8, SRI MAHADESHWARA COLLEGE ROAD, KOLLEGALA-571440', 105, 46, { align: 'center' });
+
+        // Bill Number and Date row
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Bill No: ${formData.billNumber}`, 15, 65);
+        doc.text(`Date: ${formatDate(formData.billDate)}`, 165, 65);
+
+        // Customer & Vehicle Details - 2x2 Table with grey background
+        const tableY = 70;
+        const tableHeight = formData.customerGstin ? 30 : 22;
+
+        // Draw table background (light grey)
+        doc.setFillColor(...lightGrey);
+        doc.rect(10, tableY, 190, tableHeight, 'F');
+
+        // Draw table borders
+        doc.setDrawColor(...grey);
+        doc.setLineWidth(0.3);
+        doc.rect(10, tableY, 190, tableHeight);
+        doc.line(105, tableY, 105, tableY + tableHeight);
+        doc.line(10, tableY + 11, 200, tableY + 11);
+        if (formData.customerGstin) {
+            doc.line(10, tableY + 22, 200, tableY + 22);
+        }
+
+        // Table content
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(9);
+
+        // Row 1, Col 1 - Customer Name
+        doc.setFont(undefined, 'normal');
+        doc.text('Customer:', 13, tableY + 7);
+        doc.setFont(undefined, 'bold');
+        doc.text(formData.customerName, 38, tableY + 7);
+
+        // Row 1, Col 2 - Phone
+        doc.setFont(undefined, 'normal');
+        doc.text('Phone:', 108, tableY + 7);
+        doc.setFont(undefined, 'bold');
+        doc.text(formData.customerPhone, 125, tableY + 7);
+
+        // Row 2, Col 1 - Vehicle Make
+        doc.setFont(undefined, 'normal');
+        doc.text('Vehicle:', 13, tableY + 18);
+        doc.setFont(undefined, 'bold');
+        doc.text(formData.vehicleMake, 35, tableY + 18);
+
+        // Row 2, Col 2 - Vehicle Number (BOLD & LARGER)
+        doc.setFont(undefined, 'normal');
+        doc.text('Reg. No:', 108, tableY + 18);
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(11);
+        doc.text(formData.vehicleNumber, 130, tableY + 18);
+        doc.setFontSize(9);
+
+        // Row 3 - Customer GSTIN (if provided)
+        if (formData.customerGstin) {
+            doc.setFont(undefined, 'normal');
+            doc.text('Customer GSTIN:', 13, tableY + 28);
+            doc.setFont(undefined, 'bold');
+            doc.text(formData.customerGstin, 55, tableY + 28);
+        }
+
+        // Items table starts after customer details
+        itemTableStartY = tableY + tableHeight + 5;
+    } else {
+        // Continuation page - Simple header
+        doc.setFillColor(...green);
+        doc.rect(10, 10, 190, 20, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'bold');
+        doc.text('FIX PLUS AUTO CARE CENTER', 105, 18, { align: 'center' });
+
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'italic');
+        doc.text(`[ ${copyType} - Page ${currentPage} of ${totalPages} ]`, 105, 26, { align: 'center' });
+
+        // Bill info on continuation page
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text(`Bill No: ${formData.billNumber}`, 15, 38);
+        doc.text(`Vehicle: ${formData.vehicleNumber}`, 105, 38);
+        doc.text(`Date: ${formatDate(formData.billDate)}`, 165, 38);
+
+        // Items table starts earlier on continuation pages
+        itemTableStartY = 45;
+    }
+
+    // Items table header
+    doc.setFillColor(...green);
+    doc.rect(10, itemTableStartY, 190, 9, 'FD');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(9);
+    doc.text('No.', 15, itemTableStartY + 6);
+    doc.text('Particulars', 28, itemTableStartY + 6);
+    doc.text('Qty', 150, itemTableStartY + 6);
+    doc.text('Amount', 175, itemTableStartY + 6);
+
+    // Table rows
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    let currentY = itemTableStartY + 9;
+
+    items.forEach((item, index) => {
+        // Alternate row background
+        if (index % 2 === 0) {
+            doc.setFillColor(250, 250, 250);
+            doc.rect(10, currentY, 190, 8, 'F');
+        }
+
+        doc.setFontSize(9);
+        doc.text(item.no.toString(), 17, currentY + 6);
+
+        // Handle long text
+        const particularsText = item.particulars;
+        if (particularsText.length > 55) {
+            doc.setFontSize(8);
+            doc.text(particularsText.substring(0, 55) + '...', 28, currentY + 6);
+            doc.setFontSize(9);
+        } else {
+            doc.text(particularsText, 28, currentY + 6);
+        }
+
+        doc.text(item.qty.toString(), 152, currentY + 6);
+        doc.text(parseFloat(item.amount).toFixed(2), 175, currentY + 6);
+
+        // Draw line
+        doc.setDrawColor(...grey);
+        doc.setLineWidth(0.1);
+        doc.line(10, currentY + 8, 200, currentY + 8);
+
+        currentY += 8;
+    });
+
+    // Only show totals and signature on the last page
+    if (isLastPage) {
+        // Totals section
+        const totalsY = currentY + 8;
+
+        // Draw box for totals
+        doc.setFillColor(...lightGrey);
+        doc.rect(120, totalsY - 2, 75, 38, 'F');
+        doc.setDrawColor(...green);
+        doc.setLineWidth(0.5);
+        doc.rect(120, totalsY - 2, 75, 38);
+
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+
+        doc.text('Basic:', 125, totalsY + 5);
+        doc.text(formData.basicAmount, 190, totalsY + 5, { align: 'right' });
+
+        doc.text('SGST 9%:', 125, totalsY + 12);
+        doc.text(formData.sgst, 190, totalsY + 12, { align: 'right' });
+
+        doc.text('CGST 9%:', 125, totalsY + 19);
+        doc.text(formData.cgst, 190, totalsY + 19, { align: 'right' });
+
+        // Draw line before total
+        doc.setDrawColor(...darkGreen);
+        doc.setLineWidth(0.8);
+        doc.line(122, totalsY + 23, 193, totalsY + 23);
+
+        doc.setFontSize(11);
+        doc.setTextColor(...darkGreen);
+        doc.text('Total:', 125, totalsY + 31);
+        doc.text(formData.grandTotal, 190, totalsY + 31, { align: 'right' });
+
+        // Amount in words
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'normal');
+        doc.text(`Received Rupees: ${formData.amountInWords}`, 15, totalsY + 42);
+
+        // Signature
+        doc.setFont(undefined, 'bold');
+        doc.setFontSize(8);
+        doc.text('For FIX PLUS AUTO CARE CENTER', 148, totalsY + 50);
+        doc.setFont(undefined, 'normal');
+        doc.line(148, totalsY + 62, 195, totalsY + 62);
+        doc.text('Authorized Signature', 158, totalsY + 67);
+    } else {
+        // Show "Continued on next page" message
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text('... Continued on next page', 105, currentY + 15, { align: 'center' });
+    }
+
+    // Marketing Footer (on all pages)
+    doc.setFillColor(...green);
+    doc.rect(10, 272, 190, 18, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('Thank You! Visit Again for Exciting Offers & Discounts!', 105, 278, { align: 'center' });
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'normal');
+    doc.text('Quality Service | Transparent Pricing | Customer Satisfaction Guaranteed', 105, 283, { align: 'center' });
+    doc.setFontSize(6);
+    doc.setFont(undefined, 'italic');
+    doc.text('Responsible Auto Care for a Greener Planet | ಪ್ರಕೃತಿ ಮತ್ತು ವನ್ಯಜೀವಿಗಳ ರಕ್ಷಣೆ ಅತ್ಯಗತ್ಯ', 105, 288, { align: 'center' });
+}
+
 async function generatePDF(e) {
     e.preventDefault();
 
@@ -207,6 +532,7 @@ async function generatePDF(e) {
             billDate: document.getElementById('billDate').value,
             customerName: document.getElementById('customerName').value,
             customerPhone: document.getElementById('customerPhone').value,
+            customerGstin: document.getElementById('customerGstin').value.trim(),
             vehicleMake: document.getElementById('vehicleMake').value,
             vehicleNumber: document.getElementById('vehicleNumber').value.toUpperCase(),
             basicAmount: document.getElementById('basicAmount').value,
@@ -220,236 +546,28 @@ async function generatePDF(e) {
         const items = [];
         const rows = document.querySelectorAll('.item-row');
         rows.forEach((row, index) => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const amount = parseFloat(row.querySelector('.item-amount').value) || 0;
             items.push({
                 no: index + 1,
                 particulars: row.querySelector('.item-particulars').value,
-                qty: row.querySelector('.item-qty').value,
-                amount: row.querySelector('.item-amount').value
+                qty: qty.toString(),
+                amount: (qty * amount).toFixed(2)
             });
         });
 
-        // Generate PDF
+        // Generate PDF with multiple pages (Customer Copy + Merchant Copy)
+        // Handles pagination automatically if items exceed 20 per page
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // Set colors
-        const green = [46, 204, 113];
-        const darkGreen = [39, 174, 96];
-        const lightGrey = [245, 245, 245];
-        const grey = [200, 200, 200];
+        // Customer Copy (may span multiple pages if many items)
+        generateBillCopy(doc, formData, items, 'CUSTOMER COPY', true);
 
-        // Add watermark logo if available
-        if (logoBase64) {
-            doc.saveGraphicsState();
-            doc.setGState(new doc.GState({ opacity: 0.1 }));
-            doc.addImage(logoBase64, 'PNG', 50, 100, 110, 110);
-            doc.restoreGraphicsState();
-        }
+        // Merchant Copy (may span multiple pages if many items)
+        generateBillCopy(doc, formData, items, 'MERCHANT COPY', false);
 
-        // Header - Company Info
-        doc.setFillColor(...green);
-        doc.rect(10, 10, 190, 50, 'F');
-
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text('GSTIN: 29CGBPM0738G1ZF', 15, 18);
-
-        // Bill Type (dynamic)
-        doc.setFontSize(12);
-        doc.setFont(undefined, 'bold');
-        doc.text(formData.billType, 105, 18, { align: 'center' });
-
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text('Mob: 94488 07237', 160, 18);
-        doc.text('77957 40356', 167, 23);
-
-        doc.setFontSize(20);
-        doc.setFont(undefined, 'bold');
-        doc.text('FIX PLUS AUTO CARE CENTER', 105, 33, { align: 'center' });
-
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text('All Type Car Repair & Service | Road Side Assistance', 105, 40, { align: 'center' });
-        doc.text('C-8, SRI MAHADESHWARA COLLEGE ROAD, KOLLEGALA-571440', 105, 47, { align: 'center' });
-
-        // Bill Number and Date row
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(11);
-        doc.setFont(undefined, 'bold');
-        doc.text(`Bill No: ${formData.billNumber}`, 15, 68);
-        doc.text(`Date: ${formatDate(formData.billDate)}`, 150, 68);
-
-        // Customer & Vehicle Details - 2x2 Table with grey background
-        const tableY = 73;
-        const tableHeight = 24;
-        const colWidth = 95;
-
-        // Draw table background (light grey)
-        doc.setFillColor(...lightGrey);
-        doc.rect(10, tableY, 190, tableHeight, 'F');
-
-        // Draw table borders
-        doc.setDrawColor(...grey);
-        doc.setLineWidth(0.3);
-        // Outer border
-        doc.rect(10, tableY, 190, tableHeight);
-        // Vertical middle line
-        doc.line(105, tableY, 105, tableY + tableHeight);
-        // Horizontal middle line
-        doc.line(10, tableY + 12, 200, tableY + 12);
-
-        // Table content
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
-
-        // Row 1, Col 1 - Customer Name
-        doc.setFont(undefined, 'normal');
-        doc.text('Customer Name:', 13, tableY + 8);
-        doc.setFont(undefined, 'bold');
-        doc.text(formData.customerName, 50, tableY + 8);
-
-        // Row 1, Col 2 - Phone
-        doc.setFont(undefined, 'normal');
-        doc.text('Phone:', 108, tableY + 8);
-        doc.setFont(undefined, 'bold');
-        doc.text(formData.customerPhone, 125, tableY + 8);
-
-        // Row 2, Col 1 - Vehicle Make
-        doc.setFont(undefined, 'normal');
-        doc.text('Vehicle:', 13, tableY + 20);
-        doc.setFont(undefined, 'bold');
-        doc.text(formData.vehicleMake, 35, tableY + 20);
-
-        // Row 2, Col 2 - Vehicle Number (BOLD)
-        doc.setFont(undefined, 'normal');
-        doc.text('Reg. No:', 108, tableY + 20);
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(12);
-        doc.text(formData.vehicleNumber, 130, tableY + 20);
-        doc.setFontSize(10);
-
-        // Items table
-        const itemTableStartY = tableY + tableHeight + 5;
-
-        // Table header
-        doc.setFillColor(...green);
-        doc.rect(10, itemTableStartY, 190, 10, 'FD');
-        doc.setTextColor(255, 255, 255);
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(10);
-        doc.text('No.', 15, itemTableStartY + 7);
-        doc.text('Particulars', 30, itemTableStartY + 7);
-        doc.text('Qty', 150, itemTableStartY + 7);
-        doc.text('Amount', 175, itemTableStartY + 7);
-
-        // Table rows
-        doc.setTextColor(0, 0, 0);
-        doc.setFont(undefined, 'normal');
-        let currentY = itemTableStartY + 10;
-
-        items.forEach((item, index) => {
-            if (currentY > 220) {
-                doc.addPage();
-                currentY = 20;
-                // Re-add watermark on new page
-                if (logoBase64) {
-                    doc.saveGraphicsState();
-                    doc.setGState(new doc.GState({ opacity: 0.1 }));
-                    doc.addImage(logoBase64, 'PNG', 50, 80, 110, 110);
-                    doc.restoreGraphicsState();
-                }
-            }
-
-            // Alternate row background
-            if (index % 2 === 0) {
-                doc.setFillColor(250, 250, 250);
-                doc.rect(10, currentY, 190, 10, 'F');
-            }
-
-            doc.setFontSize(10);
-            doc.text(item.no.toString(), 17, currentY + 7);
-
-            // Handle long text
-            const particularsText = item.particulars;
-            if (particularsText.length > 55) {
-                doc.setFontSize(9);
-                doc.text(particularsText.substring(0, 55) + '...', 30, currentY + 7);
-                doc.setFontSize(10);
-            } else {
-                doc.text(particularsText, 30, currentY + 7);
-            }
-
-            doc.text(item.qty.toString(), 152, currentY + 7);
-            doc.text(parseFloat(item.amount).toFixed(2), 175, currentY + 7);
-
-            // Draw line
-            doc.setDrawColor(...green);
-            doc.setLineWidth(0.2);
-            doc.line(10, currentY + 10, 200, currentY + 10);
-
-            currentY += 10;
-        });
-
-        // Totals section
-        const totalsY = currentY + 10;
-
-        // Draw box for totals
-        doc.setFillColor(...lightGrey);
-        doc.rect(120, totalsY - 3, 75, 42, 'F');
-        doc.setDrawColor(...green);
-        doc.setLineWidth(0.5);
-        doc.rect(120, totalsY - 3, 75, 42);
-
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-
-        doc.text('Basic:', 125, totalsY + 5);
-        doc.text(formData.basicAmount, 190, totalsY + 5, { align: 'right' });
-
-        doc.text('SGST 9%:', 125, totalsY + 13);
-        doc.text(formData.sgst, 190, totalsY + 13, { align: 'right' });
-
-        doc.text('CGST 9%:', 125, totalsY + 21);
-        doc.text(formData.cgst, 190, totalsY + 21, { align: 'right' });
-
-        // Draw line before total
-        doc.setDrawColor(...darkGreen);
-        doc.setLineWidth(1);
-        doc.line(122, totalsY + 26, 193, totalsY + 26);
-
-        doc.setFontSize(12);
-        doc.setTextColor(...darkGreen);
-        doc.text('Total:', 125, totalsY + 35);
-        doc.text(formData.grandTotal, 190, totalsY + 35, { align: 'right' });
-
-        // Amount in words
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'normal');
-        doc.text(`Received Rupees: ${formData.amountInWords}`, 15, totalsY + 48);
-
-        // Signature
-        doc.setFont(undefined, 'bold');
-        doc.setFontSize(9);
-        doc.text('For FIX PLUS AUTO CARE CENTER', 145, totalsY + 58);
-        doc.setFont(undefined, 'normal');
-        doc.line(145, totalsY + 72, 195, totalsY + 72);
-        doc.text('Authorized Signature', 155, totalsY + 77);
-
-        // Marketing Footer
-        doc.setFillColor(...green);
-        doc.rect(10, 275, 190, 15, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text('Thank You! Visit Again for Exciting Offers & Discounts!', 105, 283, { align: 'center' });
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'normal');
-        doc.text('Quality Service | Genuine Spare Parts | Customer Satisfaction Guaranteed', 105, 288, { align: 'center' });
-
-        // Save PDF with new filename format: billnumber_vehiclenumber_date
+        // Save PDF
         const pdfData = doc.output('datauristring');
         const vehicleNoClean = formData.vehicleNumber.replace(/[^a-zA-Z0-9]/g, '');
         const dateForFile = formatDate(formData.billDate).replace(/\//g, '-');
@@ -460,15 +578,31 @@ async function generatePDF(e) {
         if (result.success) {
             showNotification(`PDF saved: ${fileName}`);
 
+            // Store bill data for WhatsApp sharing
+            lastBillData = {
+                ...formData,
+                items: items,
+                fileName: fileName,
+                filePath: result.filePath
+            };
+
+            // Enable WhatsApp button
+            document.getElementById('sendWhatsApp').disabled = false;
+
             // Update bill number in config
             const currentBillNum = parseInt(formData.billNumber);
             await ipcRenderer.invoke('save-bill-number', currentBillNum);
 
-            // Clear form and set next bill number
+            // Open the PDF file automatically
+            setTimeout(async () => {
+                await ipcRenderer.invoke('open-pdf-file', result.filePath);
+            }, 500);
+
+            // Clear form and set next bill number after a delay
             setTimeout(async () => {
                 clearForm();
                 document.getElementById('billNumber').value = currentBillNum + 1;
-            }, 1500);
+            }, 1000);
         } else {
             showNotification('Error saving PDF: ' + result.error, 'error');
         }
@@ -476,6 +610,99 @@ async function generatePDF(e) {
         console.error('Error generating PDF:', error);
         showNotification('Error generating PDF: ' + error.message, 'error');
     }
+}
+
+// WhatsApp Functions
+function showWhatsAppModal() {
+    if (!lastBillData) {
+        showNotification('Please generate a bill first', 'error');
+        return;
+    }
+
+    const modal = document.getElementById('whatsappModal');
+    const modalText = document.getElementById('whatsappModalText');
+
+    modalText.innerHTML = `
+        Send bill details to <strong>${lastBillData.customerName}</strong><br>
+        Phone: <strong>+91 ${lastBillData.customerPhone}</strong><br>
+        Vehicle: <strong>${lastBillData.vehicleNumber}</strong><br>
+        Amount: <strong>Rs. ${lastBillData.grandTotal}</strong>
+    `;
+
+    modal.classList.add('show');
+}
+
+function hideWhatsAppModal() {
+    document.getElementById('whatsappModal').classList.remove('show');
+}
+
+function sendWhatsApp() {
+    if (!lastBillData) {
+        showNotification('No bill data available', 'error');
+        return;
+    }
+
+    // Create WhatsApp message
+    const message = createWhatsAppMessage(lastBillData);
+
+    // Format phone number for WhatsApp (add country code if not present)
+    let phoneNumber = lastBillData.customerPhone;
+    if (!phoneNumber.startsWith('91')) {
+        phoneNumber = '91' + phoneNumber;
+    }
+
+    // Create WhatsApp URL
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+    // Open WhatsApp in default browser
+    shell.openExternal(whatsappUrl);
+
+    hideWhatsAppModal();
+    showNotification('Opening WhatsApp...');
+}
+
+function createWhatsAppMessage(billData) {
+    let itemsList = '';
+    billData.items.forEach((item, index) => {
+        itemsList += `${index + 1}. ${item.particulars} - Rs.${item.amount}\n`;
+    });
+
+    const message = `*FIX PLUS AUTO CARE CENTER*
+_Experts in Mahindra, Maruti, Tata & New-Gen Cars_
+C-8, Sri Mahadeshwara College Road, Kollegala-571440
+Ph: 94488 07237, 77957 40356
+
+━━━━━━━━━━━━━━━━━━━━
+*${billData.billType}*
+━━━━━━━━━━━━━━━━━━━━
+
+*Bill No:* ${billData.billNumber}
+*Date:* ${formatDate(billData.billDate)}
+
+*Customer:* ${billData.customerName}
+*Vehicle:* ${billData.vehicleMake}
+*Reg. No:* ${billData.vehicleNumber}
+
+━━━━━━━━━━━━━━━━━━━━
+*ITEMS/SERVICES:*
+━━━━━━━━━━━━━━━━━━━━
+${itemsList}
+━━━━━━━━━━━━━━━━━━━━
+*Basic:* Rs.${billData.basicAmount}
+*SGST 9%:* Rs.${billData.sgst}
+*CGST 9%:* Rs.${billData.cgst}
+━━━━━━━━━━━━━━━━━━━━
+*TOTAL: Rs.${billData.grandTotal}*
+━━━━━━━━━━━━━━━━━━━━
+
+_${billData.amountInWords}_
+
+Thank you for choosing Fix Plus Auto Care Center!
+Visit again for exciting offers & discounts!
+
+_GSTIN: 29CGBPM0738G1ZF_`;
+
+    return message;
 }
 
 function formatDate(dateString) {
@@ -489,11 +716,13 @@ function formatDate(dateString) {
 function clearForm() {
     // Don't reset bill type - keep previous selection
     const currentBillType = document.getElementById('billType').value;
+    const currentBillNumber = document.getElementById('billNumber').value;
 
     document.getElementById('billingForm').reset();
 
-    // Restore bill type
+    // Restore bill type and bill number
     document.getElementById('billType').value = currentBillType;
+    document.getElementById('billNumber').value = currentBillNumber;
 
     // Reset items table
     const tbody = document.getElementById('itemsBody');
@@ -517,6 +746,12 @@ function clearForm() {
     // Set today's date
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('billDate').value = today;
+
+    // Disable WhatsApp button (no bill generated for new form)
+    document.getElementById('sendWhatsApp').disabled = true;
+
+    // Clear last bill data
+    lastBillData = null;
 }
 
 async function openBillsFolder() {
