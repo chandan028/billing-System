@@ -19,6 +19,9 @@
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1"
   },
+  "dependencies": {
+    "archiver": "^7.0.1"
+  },
   "build": {
     "appId": "com.fixplus.billing",
     "productName": "Fix Plus Billing",
@@ -29,5 +32,8 @@
     "directories": {
       "output": "dist"
     }
+  },
+  "dependencies": {
+    "archiver": "^7.0.1"
   }
 }

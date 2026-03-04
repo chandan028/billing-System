@@ -59,7 +59,10 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="vehicleMake">Vehicle Make:</label>
-                            <input type="text" id="vehicleMake" name="vehicleMake" required>
+                            <div class="autosuggest">
+                                <input type="text" id="vehicleMake" name="vehicleMake" autocomplete="off" required>
+                                <div id="vehicleMakeSuggestions" class="autosuggest-list"></div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="vehicleNumber">Vehicle No:</label>
@@ -123,6 +126,27 @@
                 </div>
 
                 <div class="form-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paymentMode">Payment Mode:</label>
+                            <select id="paymentMode" name="paymentMode" required>
+                                <option value="CASH" selected>Cash</option>
+                                <option value="UPI">UPI</option>
+                                <option value="CARD">Card</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="technicianName">Technician Name (Optional):</label>
+                            <input type="text" id="technicianName" name="technicianName" placeholder="e.g. Raju">
+                        </div>
+                        <div class="form-group">
+                            <label for="technicianDaySalary">Technician Day Salary (Optional):</label>
+                            <input type="number" id="technicianDaySalary" name="technicianDaySalary" step="0.01" min="0" placeholder="e.g. 500">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <div class="form-group full-width">
                         <label for="amountInWords">Amount in Words:</label>
                         <input type="text" id="amountInWords" readonly>
@@ -137,6 +161,9 @@
             </form>
         </div>
     </div>
+
+    <!-- Stock autosuggest source -->
+    <datalist id="stockSuggestions"></datalist>
 
     <!-- WhatsApp Success Modal -->
     <div id="whatsappModal" class="modal">
@@ -163,6 +190,40 @@
                     <option value="">-- Select month --</option>
                 </select>
                 <button id="generateAuditPdf" class="generate-btn">Generate month report PDF (for print/audit)</button>
+            </div>
+            <div class="audit-controls">
+                <button id="exportMonthCsv" class="add-btn" type="button">Export month to Excel (CSV)</button>
+                <button id="backupAndClear" class="clear-btn" type="button">Backup & Clear bills</button>
+            </div>
+            <div class="audit-edit">
+                <h3>Stock management</h3>
+                <div class="audit-edit-row">
+                    <label>Item:</label>
+                    <input id="stockItemName" type="text" placeholder="e.g. Shell Helix 5L" style="flex:1; min-width:220px;">
+                    <label>Rate:</label>
+                    <input id="stockItemRate" type="number" step="0.01" min="0" placeholder="0.00" style="width:120px;">
+                    <label>Qty:</label>
+                    <input id="stockItemQty" type="number" step="0.01" min="0" placeholder="0" style="width:100px;">
+                    <button id="saveStockItem" class="add-btn" type="button">Add/Update</button>
+                </div>
+                <div id="stockList" class="audit-tables"></div>
+                <p class="audit-edit-hint">Billing: type an item name in Particulars → pick suggestion → rate auto-fills → stock auto-deducts on bill save.</p>
+            </div>
+            <div class="audit-edit">
+                <h3>Edit existing bill</h3>
+                <div class="audit-edit-row">
+                    <label>Day:</label>
+                    <select id="editBillDaySelect">
+                        <option value="">-- Select day --</option>
+                    </select>
+                    <label>Bill:</label>
+                    <select id="editBillSelect">
+                        <option value="">-- Select bill --</option>
+                    </select>
+                    <button id="loadBillForEdit" class="add-btn" type="button">Load bill into form</button>
+                    <button id="cancelEditMode" class="clear-btn" type="button" style="display:none;">Cancel edit</button>
+                </div>
+                <p class="audit-edit-hint">Tip: After loading, edit items/amounts and click “Generate PDF & Print” to overwrite the same bill PDF and update audit records.</p>
             </div>
             <div id="auditSummary" class="audit-summary"></div>
             <div class="audit-tables">

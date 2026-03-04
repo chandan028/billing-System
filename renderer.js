@@ -11,6 +11,43 @@ let kannadaFontLoaded = false;
 // Store last generated bill data for WhatsApp sharing
 let lastBillData = null;
 
+// Predefined vehicle types / makes commonly seen in India
+const DEFAULT_VEHICLE_TYPES = [
+    'Maruti Suzuki Alto', 'Maruti Suzuki Alto 800', 'Maruti Suzuki Alto K10',
+    'Maruti Suzuki Wagon R', 'Maruti Suzuki Swift', 'Maruti Suzuki Swift Dzire',
+    'Maruti Suzuki Baleno', 'Maruti Suzuki Celerio', 'Maruti Suzuki Ertiga',
+    'Maruti Suzuki Eeco', 'Maruti Suzuki Brezza', 'Maruti Suzuki Grand Vitara',
+    'Hyundai Santro', 'Hyundai i10', 'Hyundai Grand i10', 'Hyundai i20', 'Hyundai i20 Elite',
+    'Hyundai Venue', 'Hyundai Creta', 'Hyundai Verna', 'Hyundai Aura', 'Hyundai Exter',
+    'Tata Tiago', 'Tata Punch', 'Tata Altroz', 'Tata Tigor', 'Tata Nexon', 'Tata Harrier', 'Tata Safari',
+    'Mahindra Bolero', 'Mahindra Bolero Neo', 'Mahindra Scorpio', 'Mahindra Scorpio N',
+    'Mahindra XUV300', 'Mahindra XUV500', 'Mahindra XUV700', 'Mahindra Thar',
+    'Honda Amaze', 'Honda City', 'Honda Jazz', 'Honda WR-V',
+    'Toyota Innova', 'Toyota Innova Crysta', 'Toyota Fortuner', 'Toyota Glanza', 'Toyota Urban Cruiser',
+    'Kia Seltos', 'Kia Sonet', 'Kia Carens',
+    'Renault Kwid', 'Renault Triber', 'Renault Kiger', 'Renault Duster',
+    'Nissan Magnite', 'Nissan Kicks',
+    'Skoda Rapid', 'Skoda Slavia', 'Skoda Kushaq',
+    'Volkswagen Polo', 'Volkswagen Vento', 'Volkswagen Taigun', 'Volkswagen Virtus',
+    'MG Hector', 'MG Astor', 'MG ZS EV',
+    'Ford Figo', 'Ford Aspire', 'Ford EcoSport', 'Ford Endeavour',
+    'Jeep Compass', 'Jeep Meridian',
+    'Hyundai i10 Nios', 'Hyundai Grand i10 Nios',
+    'SUV', 'Hatchback', 'Sedan', 'MUV', 'MPV', 'Pickup', 'Compact SUV',
+    'Tempo Traveller', 'Mini Bus', 'Taxi', 'Private Car'
+];
+
+let allVehicleTypes = [...DEFAULT_VEHICLE_TYPES];
+
+// Edit mode state (editing an existing bill)
+let editBillContext = null; // { originalBillDate, originalBillNumber, originalFileName }
+
+// Cache latest loaded month data in Audit panel
+let currentAuditMonthData = null;
+
+// Stock catalog cache
+let stockCatalog = []; // [{ name, rate, qty }]
+
 // Initialize bill number on load
 window.addEventListener('DOMContentLoaded', async () => {
     // Load logo
@@ -29,6 +66,14 @@ window.addEventListener('DOMContentLoaded', async () => {
 
     // Add event listeners
     setupEventListeners();
+
+    // Load vehicle types (user-saved) and set up autosuggest for vehicle make
+    await loadVehicleTypes();
+    setupVehicleMakeAutosuggest();
+
+    // Load stock catalog and wire autosuggest for billing items
+    await loadStockCatalog();
+    wireItemsStockAutosuggest();
 });
 
 async function loadLogo() {
@@ -68,8 +113,12 @@ function setupEventListeners() {
     // Open folder
     document.getElementById('openFolder').addEventListener('click', openBillsFolder);
 
-    // Calculate totals when items change
-    document.getElementById('itemsBody').addEventListener('input', calculateTotals);
+    // Calculate totals when items change (light debounce for better typing performance)
+    let totalsTimeout = null;
+    document.getElementById('itemsBody').addEventListener('input', function () {
+        if (totalsTimeout) clearTimeout(totalsTimeout);
+        totalsTimeout = setTimeout(calculateTotals, 80);
+    });
 
     // Phone number validation - only allow digits
     document.getElementById('customerPhone').addEventListener('input', function(e) {
@@ -82,13 +131,6 @@ function setupEventListeners() {
     });
 
     // Vehicle number lookup: on blur, pre-fill customer/vehicle if found (editable)
-    let vehicleLookupTimeout = null;
-    document.getElementById('vehicleNumber').addEventListener('input', function() {
-        clearTimeout(vehicleLookupTimeout);
-        const num = this.value.trim();
-        if (num.length < 4) return;
-        vehicleLookupTimeout = setTimeout(() => lookupVehicleAndPrefill(num), 400);
-    });
     document.getElementById('vehicleNumber').addEventListener('blur', function() {
         const num = this.value.trim();
         if (num.length >= 4) lookupVehicleAndPrefill(num);
@@ -99,6 +141,12 @@ function setupEventListeners() {
     document.getElementById('generateAuditPdf').addEventListener('click', generateAuditPdf);
     document.getElementById('showAuditPanel').addEventListener('click', showAuditPanel);
     document.getElementById('hideAuditPanel').addEventListener('click', hideAuditPanel);
+    document.getElementById('editBillDaySelect').addEventListener('change', refreshEditBillList);
+    document.getElementById('loadBillForEdit').addEventListener('click', loadSelectedBillForEdit);
+    document.getElementById('cancelEditMode').addEventListener('click', cancelEditMode);
+    document.getElementById('exportMonthCsv').addEventListener('click', exportMonthCsv);
+    document.getElementById('backupAndClear').addEventListener('click', backupAndClear);
+    document.getElementById('saveStockItem').addEventListener('click', saveStockItem);
 
     // WhatsApp button
     document.getElementById('sendWhatsApp').addEventListener('click', showWhatsAppModal);
@@ -112,6 +160,194 @@ function setupEventListeners() {
         if (e.target === this) {
             hideWhatsAppModal();
         }
+    });
+}
+
+async function loadVehicleTypes() {
+    try {
+        const result = await ipcRenderer.invoke('get-user-vehicle-types');
+        if (result && result.success && Array.isArray(result.types)) {
+            const merged = new Set([
+                ...DEFAULT_VEHICLE_TYPES,
+                ...result.types.map(v => String(v).trim()).filter(Boolean)
+            ]);
+            allVehicleTypes = Array.from(merged).sort((a, b) => a.localeCompare(b));
+        } else {
+            allVehicleTypes = [...DEFAULT_VEHICLE_TYPES];
+        }
+    } catch (error) {
+        console.error('Error loading user vehicle types:', error);
+        allVehicleTypes = [...DEFAULT_VEHICLE_TYPES];
+    }
+}
+
+async function loadStockCatalog() {
+    try {
+        const result = await ipcRenderer.invoke('get-stock-catalog');
+        if (result && result.success && Array.isArray(result.items)) {
+            stockCatalog = result.items;
+        } else {
+            stockCatalog = [];
+        }
+        refreshStockDatalist();
+        renderStockList();
+    } catch (error) {
+        console.error('Error loading stock catalog:', error);
+        stockCatalog = [];
+    }
+}
+
+function refreshStockDatalist() {
+    const dl = document.getElementById('stockSuggestions');
+    if (!dl) return;
+    dl.innerHTML = '';
+    stockCatalog
+        .slice()
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        .forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = it.name;
+            dl.appendChild(opt);
+        });
+}
+
+function wireItemsStockAutosuggest() {
+    const tbody = document.getElementById('itemsBody');
+    if (!tbody) return;
+
+    function attachToRow(row) {
+        const part = row.querySelector('.item-particulars');
+        if (!part) return;
+        part.setAttribute('list', 'stockSuggestions');
+        part.addEventListener('change', () => applyStockToRow(row));
+        part.addEventListener('blur', () => applyStockToRow(row));
+    }
+
+    // Existing rows
+    tbody.querySelectorAll('.item-row').forEach(attachToRow);
+
+    // When new items are added, hook them too (use mutation observer)
+    const obs = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.nodeType === 1 && node.classList.contains('item-row')) {
+                    attachToRow(node);
+                }
+            }
+        }
+    });
+    obs.observe(tbody, { childList: true });
+}
+
+function applyStockToRow(row) {
+    const part = row.querySelector('.item-particulars');
+    const amt = row.querySelector('.item-amount');
+    if (!part || !amt) return;
+    const name = (part.value || '').trim();
+    if (!name) return;
+    const match = stockCatalog.find(it => String(it.name).toLowerCase() === name.toLowerCase());
+    if (!match) return;
+    const current = parseFloat(amt.value);
+    // Only auto-fill when amount is empty or 0
+    if (!current || current === 0) {
+        amt.value = (parseFloat(match.rate) || 0).toFixed(2);
+        calculateTotals();
+    }
+}
+
+async function saveStockItem() {
+    const name = (document.getElementById('stockItemName').value || '').trim();
+    const rate = parseFloat(document.getElementById('stockItemRate').value) || 0;
+    const qty = parseFloat(document.getElementById('stockItemQty').value) || 0;
+    if (!name) {
+        showNotification('Enter stock item name', 'error');
+        return;
+    }
+    const result = await ipcRenderer.invoke('upsert-stock-item', { name, rate, qty });
+    if (!result.success) {
+        showNotification('Failed to save stock item: ' + (result.error || ''), 'error');
+        return;
+    }
+    showNotification('Stock item saved');
+    await loadStockCatalog();
+}
+
+function renderStockList() {
+    const el = document.getElementById('stockList');
+    if (!el) return;
+    if (!stockCatalog.length) {
+        el.innerHTML = '<p>No stock items yet.</p>';
+        return;
+    }
+    const rows = stockCatalog
+        .slice()
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        .map(it => `<tr><td>${escapeHtml(it.name)}</td><td>${(parseFloat(it.rate)||0).toFixed(2)}</td><td>${(parseFloat(it.qty)||0).toFixed(2)}</td></tr>`)
+        .join('');
+    el.innerHTML = `
+        <table class="audit-table">
+            <thead><tr><th>Item</th><th>Rate</th><th>Qty available</th></tr></thead>
+            <tbody>${rows}</tbody>
+        </table>
+    `;
+}
+
+function setupVehicleMakeAutosuggest() {
+    const input = document.getElementById('vehicleMake');
+    const listEl = document.getElementById('vehicleMakeSuggestions');
+    if (!input || !listEl) return;
+
+    let hideTimeout = null;
+
+    function renderSuggestions() {
+        const query = input.value.trim().toLowerCase();
+        listEl.innerHTML = '';
+
+        if (!query) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        const matches = allVehicleTypes
+            .filter(v => v.toLowerCase().includes(query))
+            .slice(0, 12);
+
+        if (!matches.length) {
+            listEl.style.display = 'none';
+            return;
+        }
+
+        matches.forEach(value => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'autosuggest-item';
+            itemEl.textContent = value;
+            itemEl.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                input.value = value;
+                listEl.style.display = 'none';
+            });
+            listEl.appendChild(itemEl);
+        });
+
+        listEl.style.display = 'block';
+    }
+
+    input.addEventListener('input', renderSuggestions);
+    input.addEventListener('focus', renderSuggestions);
+    input.addEventListener('blur', () => {
+        hideTimeout = setTimeout(() => {
+            listEl.style.display = 'none';
+        }, 150);
+    });
+
+    listEl.addEventListener('mouseenter', () => {
+        if (hideTimeout) clearTimeout(hideTimeout);
+    });
+
+    listEl.addEventListener('mouseleave', () => {
+        hideTimeout = setTimeout(() => {
+            listEl.style.display = 'none';
+        }, 150);
     });
 }
 
@@ -644,6 +880,9 @@ async function generatePDF(e) {
             vehicleMake: document.getElementById('vehicleMake').value,
             vehicleNumber: formatVehicleNumber(document.getElementById('vehicleNumber').value),
             odometerReading: document.getElementById('odometerReading').value.trim(),
+            paymentMode: document.getElementById('paymentMode').value,
+            technicianName: (document.getElementById('technicianName').value || '').trim(),
+            technicianDaySalary: (document.getElementById('technicianDaySalary').value || '').trim(),
             basicAmount: document.getElementById('basicAmount').value,
             sgst: document.getElementById('sgst').value,
             cgst: document.getElementById('cgst').value,
@@ -695,7 +934,8 @@ async function generatePDF(e) {
         const pdfData = doc.output('datauristring');
         const vehicleNoClean = formData.vehicleNumber.replace(/[^a-zA-Z0-9]/g, '');
         const dateForFile = formatDate(formData.billDate).replace(/\//g, '-');
-        const fileName = `${formData.billNumber}_${vehicleNoClean}_${dateForFile}.pdf`;
+        const computedFileName = `${formData.billNumber}_${vehicleNoClean}_${dateForFile}.pdf`;
+        const fileName = (editBillContext && editBillContext.originalFileName) ? editBillContext.originalFileName : computedFileName;
 
         const result = await ipcRenderer.invoke('save-pdf', { pdfData, fileName });
 
@@ -713,14 +953,24 @@ async function generatePDF(e) {
                 vehicleMake: formData.vehicleMake,
                 vehicleNumber: formData.vehicleNumber,
                 odometerReading: formData.odometerReading,
+                paymentMode: formData.paymentMode,
+                technicianName: formData.technicianName,
+                technicianDaySalary: formData.technicianDaySalary,
                 basicAmount: formData.basicAmount,
                 sgst: formData.sgst,
                 cgst: formData.cgst,
                 grandTotal: formData.grandTotal,
                 amountInWords: formData.amountInWords,
-                items: items
+                items: items,
+                fileName: fileName
             };
-            const saveRecordResult = await ipcRenderer.invoke('save-bill-record', record);
+            const saveRecordResult = editBillContext
+                ? await ipcRenderer.invoke('update-bill-record', {
+                    originalBillDate: editBillContext.originalBillDate,
+                    originalBillNumber: editBillContext.originalBillNumber,
+                    updatedRecord: record
+                })
+                : await ipcRenderer.invoke('save-bill-record', record);
             if (!saveRecordResult.success) {
                 console.error('Failed to save bill record for audit:', saveRecordResult.error);
             }
@@ -736,9 +986,11 @@ async function generatePDF(e) {
             // Enable WhatsApp button
             document.getElementById('sendWhatsApp').disabled = false;
 
-            // Update bill number in config
-            const currentBillNum = parseInt(formData.billNumber);
-            await ipcRenderer.invoke('save-bill-number', currentBillNum);
+            // Update bill number in config (skip when editing existing bill)
+            if (!editBillContext) {
+                const currentBillNum = parseInt(formData.billNumber);
+                await ipcRenderer.invoke('save-bill-number', currentBillNum);
+            }
 
             // Open the PDF file automatically
             setTimeout(async () => {
@@ -751,6 +1003,15 @@ async function generatePDF(e) {
             setTimeout(() => {
                 showNotification('Bill saved! Use WhatsApp button or Clear Form for next bill', 'success');
             }, 1500);
+
+            // Exit edit mode after successful overwrite/update
+            if (editBillContext) {
+                editBillContext = null;
+                document.getElementById('cancelEditMode').style.display = 'none';
+                document.getElementById('billNumber').disabled = false;
+                document.getElementById('billDate').disabled = false;
+                document.getElementById('vehicleNumber').disabled = false;
+            }
         } else {
             showNotification('Error saving PDF: ' + result.error, 'error');
         }
@@ -955,10 +1216,13 @@ function monthName(m) {
 async function loadAuditMonth() {
     const YYYYMM = document.getElementById('auditMonthSelect').value;
     currentAuditMonth = YYYYMM;
+    currentAuditMonthData = null;
     if (!YYYYMM) {
         document.getElementById('auditSummary').innerHTML = '';
         document.getElementById('auditDayTableBody').innerHTML = '';
         document.getElementById('auditDayExpenses').innerHTML = '';
+        document.getElementById('editBillDaySelect').innerHTML = '<option value="">-- Select day --</option>';
+        document.getElementById('editBillSelect').innerHTML = '<option value="">-- Select bill --</option>';
         return;
     }
     const result = await ipcRenderer.invoke('get-month-records', YYYYMM);
@@ -966,9 +1230,12 @@ async function loadAuditMonth() {
         document.getElementById('auditSummary').innerHTML = '<p>No records for this month.</p>';
         document.getElementById('auditDayTableBody').innerHTML = '';
         document.getElementById('auditDayExpenses').innerHTML = '';
+        document.getElementById('editBillDaySelect').innerHTML = '<option value="">-- Select day --</option>';
+        document.getElementById('editBillSelect').innerHTML = '<option value="">-- Select bill --</option>';
         return;
     }
     const data = result.data;
+    currentAuditMonthData = data;
     const [year, month] = YYYYMM.split('-');
     const totalBilling = data.monthTotalBilling || 0;
     const basicAmount = data.monthBasicAmount || 0;
@@ -976,6 +1243,10 @@ async function loadAuditMonth() {
     const cgst = data.monthCGST || 0;
     const labor = data.monthLaborPaid || 0;
     const other = data.monthOtherExpenditure || 0;
+    const cash = data.monthCashCollected || 0;
+    const upi = data.monthUpiCollected || 0;
+    const card = data.monthCardCollected || 0;
+    const techPayout = data.monthTechnicianPayout || 0;
 
     document.getElementById('auditSummary').innerHTML = `
         <h4>${monthName(parseInt(month, 10))} ${year} – Summary</h4>
@@ -986,6 +1257,10 @@ async function loadAuditMonth() {
             <div class="audit-summary-item"><span>CGST Collected:</span> <strong>₹ ${cgst.toFixed(2)}</strong></div>
             <div class="audit-summary-item"><span>Total Labor Paid:</span> <strong>₹ ${labor.toFixed(2)}</strong></div>
             <div class="audit-summary-item"><span>Other Expenditure:</span> <strong>₹ ${other.toFixed(2)}</strong></div>
+            <div class="audit-summary-item"><span>Cash Collected:</span> <strong>₹ ${cash.toFixed(2)}</strong></div>
+            <div class="audit-summary-item"><span>UPI Collected:</span> <strong>₹ ${upi.toFixed(2)}</strong></div>
+            <div class="audit-summary-item"><span>Card Collected:</span> <strong>₹ ${card.toFixed(2)}</strong></div>
+            <div class="audit-summary-item"><span>Technician Payout (daily):</span> <strong>₹ ${techPayout.toFixed(2)}</strong></div>
         </div>
     `;
 
@@ -1019,6 +1294,14 @@ async function loadAuditMonth() {
     document.getElementById('auditDayExpenses').innerHTML = expensesHtml;
     const saveBtn = document.getElementById('saveDayExpenses');
     if (saveBtn) saveBtn.addEventListener('click', saveDayExpenses);
+
+    // Populate edit dropdowns (day list first)
+    const daySel = document.getElementById('editBillDaySelect');
+    daySel.innerHTML = '<option value="">-- Select day --</option>';
+    dayKeys.forEach(d => {
+        daySel.appendChild(new Option(`${d}/${month}/${year}`, d));
+    });
+    document.getElementById('editBillSelect').innerHTML = '<option value="">-- Select bill --</option>';
 }
 
 async function saveDayExpenses() {
@@ -1147,6 +1430,143 @@ async function generateAuditPdf() {
     } else {
         showNotification('Error saving audit PDF: ' + saveResult.error, 'error');
     }
+}
+
+async function exportMonthCsv() {
+    if (!currentAuditMonth) {
+        showNotification('Please select a month first', 'error');
+        return;
+    }
+    const result = await ipcRenderer.invoke('export-month-csv', { YYYYMM: currentAuditMonth });
+    if (!result.success) {
+        showNotification('Export failed: ' + (result.error || ''), 'error');
+        return;
+    }
+    showNotification(`Exported: ${result.fileName}`);
+    if (result.filePath) {
+        setTimeout(() => ipcRenderer.invoke('open-pdf-file', result.filePath), 300);
+    }
+}
+
+async function backupAndClear() {
+    const ok = window.confirm('This will create a backup ZIP and then CLEAR all bills (billing_records + generated PDFs). Continue?');
+    if (!ok) return;
+    const result = await ipcRenderer.invoke('backup-and-clear-bills');
+    if (!result.success) {
+        showNotification('Backup failed: ' + (result.error || ''), 'error');
+        return;
+    }
+    showNotification(`Backup created: ${result.fileName}. Bills cleared.`);
+    // refresh audit UI
+    currentAuditMonth = null;
+    currentAuditMonthData = null;
+    await loadAuditMonthsList();
+    await loadStockCatalog();
+}
+
+function refreshEditBillList() {
+    const billSel = document.getElementById('editBillSelect');
+    billSel.innerHTML = '<option value="">-- Select bill --</option>';
+
+    if (!currentAuditMonthData) return;
+    const day = document.getElementById('editBillDaySelect').value;
+    if (!day) return;
+
+    const dayData = (currentAuditMonthData.days || {})[day];
+    const bills = (dayData && dayData.bills) ? dayData.bills : [];
+
+    // Show latest first within day
+    const sorted = [...bills].sort((a, b) => (parseInt(b.billNumber, 10) || 0) - (parseInt(a.billNumber, 10) || 0));
+    sorted.forEach(b => {
+        const label = `Bill #${b.billNumber} • ${b.vehicleNumber || ''} • Rs.${(parseFloat(b.grandTotal) || 0).toFixed(2)}`;
+        billSel.appendChild(new Option(label, String(b.billNumber)));
+    });
+}
+
+function cancelEditMode() {
+    editBillContext = null;
+    document.getElementById('cancelEditMode').style.display = 'none';
+    document.getElementById('billNumber').disabled = false;
+    document.getElementById('billDate').disabled = false;
+    document.getElementById('vehicleNumber').disabled = false;
+    showNotification('Edit mode cancelled.');
+}
+
+function loadSelectedBillForEdit() {
+    if (!currentAuditMonth || !currentAuditMonthData) {
+        showNotification('Please select a month first', 'error');
+        return;
+    }
+    const day = document.getElementById('editBillDaySelect').value;
+    const billNumber = document.getElementById('editBillSelect').value;
+    if (!day || !billNumber) {
+        showNotification('Please select day and bill', 'error');
+        return;
+    }
+    const dayData = (currentAuditMonthData.days || {})[day];
+    const bills = (dayData && dayData.bills) ? dayData.bills : [];
+    const bill = bills.find(b => String(b.billNumber) === String(billNumber));
+    if (!bill) {
+        showNotification('Bill not found', 'error');
+        return;
+    }
+
+    // Fill the form
+    document.getElementById('billType').value = bill.billType || 'CASH BILL';
+    document.getElementById('billNumber').value = bill.billNumber || '';
+    document.getElementById('billDate').value = bill.billDate || '';
+    document.getElementById('customerName').value = bill.customerName || '';
+    document.getElementById('customerPhone').value = bill.customerPhone || '';
+    document.getElementById('customerGstin').value = bill.customerGstin || '';
+    document.getElementById('vehicleMake').value = bill.vehicleMake || '';
+    document.getElementById('vehicleNumber').value = bill.vehicleNumber || '';
+    document.getElementById('odometerReading').value = bill.odometerReading || '';
+
+    // Items table
+    const tbody = document.getElementById('itemsBody');
+    const items = Array.isArray(bill.items) ? bill.items : [];
+    const rowsHtml = (items.length ? items : [{ particulars: '', qty: '1', amount: '0.00' }]).map((it, idx) => {
+        // Stored item.amount is line total; we keep qty and amount as "per unit" in UI.
+        // If we can't infer unit price, we set unit=lineTotal/qty.
+        const qty = parseFloat(it.qty) || 1;
+        const lineTotal = parseFloat(it.amount) || 0;
+        const unit = qty ? (lineTotal / qty) : lineTotal;
+        return `
+            <tr class="item-row">
+                <td class="item-number">${idx + 1}</td>
+                <td><input type="text" class="item-particulars" placeholder="Item/Service description" required value="${escapeHtml(it.particulars || '')}"></td>
+                <td><input type="number" class="item-qty" value="${qty}" min="1" required></td>
+                <td><input type="number" class="item-amount" placeholder="0.00" step="0.01" min="0" required value="${unit.toFixed(2)}"></td>
+                <td><button type="button" class="remove-btn" onclick="removeItem(this)">Remove</button></td>
+            </tr>
+        `;
+    }).join('');
+    tbody.innerHTML = rowsHtml;
+    updateItemNumbers();
+    calculateTotals();
+
+    // Enter edit mode: lock identifiers to keep same bill identity and overwrite same PDF name
+    editBillContext = {
+        originalBillDate: bill.billDate,
+        originalBillNumber: bill.billNumber,
+        originalFileName: bill.fileName || null
+    };
+    document.getElementById('cancelEditMode').style.display = 'inline-block';
+    document.getElementById('billNumber').disabled = true;
+    document.getElementById('billDate').disabled = true;
+    document.getElementById('vehicleNumber').disabled = true;
+
+    hideAuditPanel();
+    showNotification(`Loaded Bill #${bill.billNumber} for editing. Now update and click “Generate PDF & Print”.`);
+}
+
+function escapeHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function showNotification(message, type = 'success') {
