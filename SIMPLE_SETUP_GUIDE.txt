@@ -1,0 +1,256 @@
+================================================================================
+       FIX PLUS AUTO CARE CENTER - BILLING SOFTWARE
+                    SIMPLE SETUP GUIDE
+           (For Non-Technical Users - Very Easy!)
+================================================================================
+
+📋 WHAT YOU NEED:
+-----------------
+1. A Windows computer
+2. Internet connection (only for first-time setup)
+3. This folder with all the files
+
+
+================================================================================
+STEP 1: INSTALL NODE.JS (Only Once - First Time)
+================================================================================
+
+1. Open Google Chrome or any web browser
+
+2. Type this in the address bar:  https://nodejs.org
+
+3. You will see a website with 2 green buttons
+   - Click the LEFT button (it says "LTS" - Recommended)
+   - A file will download (around 30MB)
+
+4. After download completes:
+   - Go to "Downloads" folder
+   - Double-click the downloaded file (nodejs-something.msi)
+   - Click "Next" → "Next" → "Next" → "Install"
+   - Wait 2-3 minutes for installation
+   - Click "Finish"
+
+5. RESTART YOUR COMPUTER (Very Important!)
+
+
+================================================================================
+STEP 2: SETUP THE BILLING SOFTWARE (Only Once - First Time)
+================================================================================
+
+1. After computer restarts, go to this folder:
+   "Downloads" → "fixplus" → "project bill"
+
+2. Hold SHIFT key on keyboard + Right-click on empty space in folder
+
+3. Click "Open PowerShell window here" or "Open command window here"
+   (A black/blue window will open - don't worry!)
+
+4. Type this EXACTLY (or copy-paste):
+   npm install
+
+5. Press ENTER key
+
+6. Wait 3-5 minutes (you will see many lines appearing - it's normal!)
+
+7. When it's done, you'll see your folder path again
+
+8. Close the black/blue window
+
+✅ SETUP COMPLETE! You did it!
+
+
+================================================================================
+STEP 3: STARTING THE BILLING SOFTWARE (Daily Use)
+================================================================================
+
+METHOD 1 (Easiest):
+-------------------
+1. Go to folder: "Downloads" → "fixplus" → "project bill"
+
+2. Find file named: START_APP.bat
+
+3. Double-click on START_APP.bat
+
+4. Billing software will open in a window!
+
+
+METHOD 2 (Alternative):
+-----------------------
+1. Hold SHIFT + Right-click in the project folder
+
+2. Click "Open PowerShell window here"
+
+3. Type: npm start
+
+4. Press ENTER
+
+
+================================================================================
+HOW TO CREATE A BILL (Step-by-Step)
+================================================================================
+
+When the software opens, you will see a green form:
+
+1. BILL NUMBER
+   → Already filled automatically (don't change it)
+
+2. DATE
+   → Today's date is already filled (you can change if needed)
+
+3. CUSTOMER NAME
+   → Type customer's full name
+
+4. CELL/TELE NO
+   → Type phone number
+
+5. VEHICLE MAKE
+   → Type car brand and model (Example: Maruti Swift)
+
+6. VEHICLE NO
+   → Type vehicle registration number (Example: KA-09-MN-1234)
+
+7. ADD ITEMS/SERVICES:
+
+   Row 1 is already there:
+   - Particulars: Type what work was done (Example: Engine Oil Change)
+   - Qty: Type quantity (Example: 1)
+   - Amount: Type price per item (Example: 500)
+
+   To add more items:
+   - Click "+ Add Item" button at the bottom
+   - Fill the new row
+
+   To remove an item:
+   - Click "Remove" button on that row
+
+8. AUTOMATIC CALCULATIONS:
+
+   As you type amounts, these will calculate automatically:
+   - Basic Amount (sum of all items)
+   - SGST 9% (tax)
+   - CGST 9% (tax)
+   - Total (Basic + SGST + CGST = 18% GST included)
+   - Amount in Words (in English)
+
+9. GENERATE PDF:
+
+   When everything is filled:
+   - Click the big green "GENERATE PDF" button
+   - You'll see a message "PDF saved successfully"
+   - Bill number will increase automatically for next bill
+   - Form will clear automatically
+
+10. VIEW YOUR BILLS:
+
+    - Click "Open Bills Folder" button at the top
+    - All your bills are saved here as PDF files
+    - You can print these PDFs anytime
+
+
+================================================================================
+TIPS & TRICKS
+================================================================================
+
+✓ Bill numbers start from 186 and increase automatically
+
+✓ All calculations (GST, Total) happen automatically - no need to calculate!
+
+✓ You can type decimal amounts (Example: 350.50)
+
+✓ To clear the form without saving: Click "Clear Form" button
+
+✓ PDFs are saved with names like: Bill_186_CustomerName_date.pdf
+
+✓ BACKUP YOUR BILLS: Copy the "generated_bills" folder to USB drive weekly
+
+
+================================================================================
+COMMON PROBLEMS & SOLUTIONS
+================================================================================
+
+PROBLEM: "npm is not recognized" error
+SOLUTION:
+  - Node.js is not installed properly
+  - Go back to STEP 1 and install Node.js again
+  - Make sure to RESTART computer after installing
+
+
+PROBLEM: Application doesn't start
+SOLUTION:
+  - Make sure you ran "npm install" first (STEP 2)
+  - Try closing and opening again
+  - Restart your computer and try again
+
+
+PROBLEM: Can't find START_APP.bat file
+SOLUTION:
+  - Make sure you're in the correct folder
+  - Folder should be: "Downloads" → "fixplus" → "project bill"
+  - If still not there, use METHOD 2 to start
+
+
+PROBLEM: PDF not generating
+SOLUTION:
+  - Make sure all fields are filled (marked with red)
+  - Make sure amounts are numbers only (no letters)
+  - Try clicking Generate PDF button again
+
+
+PROBLEM: Bill numbers not increasing
+SOLUTION:
+  - This is normal - bill number increases AFTER you generate a PDF
+  - If stuck, close and reopen the application
+
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+⚠️ INTERNET: You need internet ONLY for first-time setup (STEP 1 & 2)
+           After setup, software works WITHOUT internet!
+
+⚠️ BACKUP: Your bills are in "generated_bills" folder
+           Copy this folder to USB drive or external hard disk regularly
+
+⚠️ PRINTING: Open any PDF from "generated_bills" folder
+             Press Ctrl+P to print or Right-click → Print
+
+⚠️ DON'T DELETE: Don't delete these files:
+                  - bill_config.json (stores bill numbers)
+                  - generated_bills folder (your bills are here)
+
+
+================================================================================
+YOUR BILL INCLUDES
+================================================================================
+
+✓ Company Name: FIX PLUS AUTO CARE CENTER
+✓ GSTIN: 29CGBPM0738G1ZF
+✓ Address: C-8, SRI MAHADESHWARA COLLEGE ROAD,KOLLEGALA-571440
+✓ Phone: 94488 07237, 77957 40356
+✓ Bill Number & Date
+✓ Customer & Vehicle Details
+✓ Itemized Services/Parts
+✓ SGST 9% + CGST 9% = 18% GST
+✓ Total Amount
+✓ Amount in Words
+✓ Signature Line
+
+
+================================================================================
+NEED HELP?
+================================================================================
+
+If you face any problems:
+
+1. Read this guide again carefully
+2. Make sure you followed all steps exactly
+3. Try restarting your computer
+4. Ask someone who knows computers to help with STEP 1 & 2
+
+Once setup is done, daily use is very easy - just double-click START_APP.bat!
+
+
+================================================================================
+                        🎉 HAPPY BILLING! 🎉
+================================================================================
