@@ -29,6 +29,29 @@ body {
     align-items: center;
 }
 
+.header-buttons {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.audit-btn {
+    background: rgba(255, 255, 255, 0.95);
+    color: #27ae60;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.audit-btn:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
 .app-header h1 {
     font-size: 28px;
     font-weight: 600;
@@ -103,6 +126,27 @@ body {
     cursor: not-allowed;
     color: #555 !important;
     font-weight: 600;
+}
+
+.input-with-suffix {
+    display: flex;
+    align-items: center;
+}
+
+.input-with-suffix input {
+    flex: 1;
+    border-radius: 5px 0 0 5px !important;
+}
+
+.input-suffix {
+    background: #2ecc71;
+    color: white;
+    padding: 10px 12px;
+    border: 2px solid #2ecc71;
+    border-left: none;
+    border-radius: 0 5px 5px 0;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 .items-section {
@@ -439,7 +483,244 @@ body {
 
     .app-header,
     .button-group,
-    .notification {
-        display: none;
+    .notification,
+    .audit-panel {
+        display: none !important;
     }
+}
+
+/* Audit & Reports panel */
+.audit-panel {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1500;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.audit-panel.show {
+    display: flex;
+}
+
+.audit-panel-inner {
+    background: white;
+    border-radius: 10px;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.audit-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #2ecc71;
+}
+
+.audit-panel-header h2 {
+    color: #2c3e50;
+    font-size: 22px;
+}
+
+.audit-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.audit-controls label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.audit-controls select {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 180px;
+}
+
+.audit-summary {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.audit-summary h4 {
+    color: #27ae60;
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.audit-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.audit-summary-item {
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.audit-summary-item span {
+    margin-right: 6px;
+}
+
+.audit-tables {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.audit-table th,
+.audit-table td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #e0e0e0;
+}
+
+.audit-table thead {
+    background: #2ecc71;
+    color: white;
+}
+
+.audit-table tbody tr:nth-child(even) {
+    background: #f8f9fa;
+}
+
+.audit-day-expenses h4 {
+    color: #2c3e50;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+.audit-edit {
+    margin-bottom: 18px;
+    padding: 14px;
+    background: #fff;
+    border: 1px dashed #2ecc71;
+    border-radius: 8px;
+}
+
+.audit-edit h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.audit-edit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.audit-edit-row label {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.audit-edit-row select {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 140px;
+}
+
+.audit-edit-hint {
+    margin-top: 10px;
+    color: #666;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.day-expenses-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.day-expense-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.day-expense-row label {
+    min-width: 90px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.day-expense-row input {
+    padding: 8px 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    width: 100px;
+    font-size: 14px;
+}
+
+.day-expense-row input:focus {
+    outline: none;
+    border-color: #2ecc71;
+}
+
+/* Vehicle make autosuggest */
+.autosuggest {
+    position: relative;
+    width: 100%;
+}
+
+.autosuggest input {
+    width: 100%;
+}
+
+.autosuggest-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-top: none;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    z-index: 500;
+    display: none;
+}
+
+.autosuggest-item {
+    padding: 8px 10px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.autosuggest-item:hover {
+    background: #f0f9f1;
 }
